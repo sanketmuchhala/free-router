@@ -229,6 +229,10 @@ node dist/cli.js serve
 
 The tests run the real server against a fake provider whose models misbehave on purpose (rate limits, silence, errors inside streams, connections that drop mid-answer), and drive it with the official OpenAI and Anthropic SDKs. How it is built: [docs/architecture.md](docs/architecture.md).
 
+## Acknowledgements
+
+The interactive Terminal User Interface (TUI) design and inspiration comes from [humantonylee/free-router](https://github.com/humantonylee/free-router). Although this project shares a similar name, it was built independently as an API proxy. We loved their TUI approach and adapted a similar interface for our CLI.
+
 ## License
 
 MIT

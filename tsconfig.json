@@ -10,7 +10,8 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "react-jsx"
   },
   "include": ["src", "test"]
 }

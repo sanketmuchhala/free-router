@@ -68,14 +68,22 @@ async function serve(args: string[]) {
 async function models(args: string[]) {
   const { providers } = loadConfig({ path: flag(args, 'config') });
   const catalog = new Catalog(providers);
-  for (const status of await catalog.refresh()) {
-    console.log(`${status.id.padEnd(12)} ${status.ok ? `${status.free} free of ${status.listed}` : `unavailable: ${status.error}`}`);
-  }
+  const statuses = await catalog.refresh();
   const health = new Health();
-  for (const [label, task] of [['Chat', profileTask([{ role: 'user', content: 'Explain this' }], false)], ['Agents with tools (code)', profileTask([{ role: 'user', content: 'Fix it' }], true)]] as const) {
-    console.log(`\n${label}, best first:`);
-    for (const { model, why } of rank(catalog.models(), task, health).ranked.slice(0, 15)) console.log(`  ${model.ref.padEnd(60)} ${why.join(', ')}`);
+  
+  if (flag(args, 'json') || !process.stdout.isTTY) {
+    for (const status of statuses) {
+      console.log(`${status.id.padEnd(12)} ${status.ok ? `${status.free} free of ${status.listed}` : `unavailable: ${status.error}`}`);
+    }
+    for (const [label, task] of [['Chat', profileTask([{ role: 'user', content: 'Explain this' }], false)], ['Agents with tools (code)', profileTask([{ role: 'user', content: 'Fix it' }], true)]] as const) {
+      console.log(`\n${label}, best first:`);
+      for (const { model, why } of rank(catalog.models(), task, health).ranked.slice(0, 15)) console.log(`  ${model.ref.padEnd(60)} ${why.join(', ')}`);
+    }
+    return;
   }
+  
+  const { startTui } = await import('./tui.js');
+  startTui(catalog, health, statuses);
 }
 
 function key(args: string[]) {
