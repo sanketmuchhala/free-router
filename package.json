@@ -1,0 +1,43 @@
+{
+  "name": "free-router",
+  "version": "0.1.0",
+  "description": "One OpenAI- and Anthropic-compatible endpoint for every free AI model you have. Picks the best free model for each request and falls back when one is rate limited.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Sanket Muchhala",
+  "bin": {
+    "free-router": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "free-router.example.json"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "pnpm build && node dist/cli.js serve",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node dist/cli.js serve"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@types/node": "^20.0.0",
+    "openai": "^5.0.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

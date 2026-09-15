@@ -1,0 +1,238 @@
+import { randomBytes } from 'crypto';
+import type { SSERecord } from './route.js';
+import type { ChatMessage, ChatRequest, ContentPart } from './types.js';
+
+// Clients built for Anthropic's Messages API (Claude Code, the Anthropic SDKs) talk to the router
+// as if it were Anthropic. Requests become OpenAI chat completions for the free providers, and
+// their streams become Anthropic events.
+
+type Block = { type: string; [key: string]: any };
+
+export interface AnthropicRequest {
+  model: string;
+  max_tokens?: number;
+  system?: string | Block[];
+  messages: { role: 'user' | 'assistant'; content: string | Block[] }[];
+  tools?: { name?: string; type?: string | null; description?: string; input_schema?: unknown; [key: string]: any }[];
+  tool_choice?: { type: 'auto' | 'any' | 'tool' | 'none'; name?: string; disable_parallel_tool_use?: boolean };
+  temperature?: number;
+  top_p?: number;
+  stop_sequences?: string[];
+  stream?: boolean;
+  metadata?: { user_id?: string };
+  [key: string]: unknown;
+}
+
+export class TranslationError extends Error {}
+
+const imageURL = (block: Block): string | undefined =>
+  block.source?.type === 'base64' ? `data:${block.source.media_type};base64,${block.source.data}`
+    : block.source?.type === 'url' ? block.source.url : undefined;
+
+const textOfBlocks = (content: string | Block[] | undefined): string =>
+  typeof content === 'string' ? content : (content ?? []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+
+function documentText(block: Block): string {
+  if (block.source?.type === 'text') return `${block.title ? `${block.title}\n` : ''}${block.source.data}`;
+  return `[${block.title ?? 'A document'} was attached but cannot be passed to free models.]`;
+}
+
+/** Only tools the client runs itself can go to another model; Anthropic's server tools (web search) cannot. */
+const clientTool = (tool: NonNullable<AnthropicRequest['tools']>[number]) => !!tool.input_schema && (tool.type == null || tool.type === 'custom');
+
+export function toChatRequest(request: AnthropicRequest): ChatRequest {
+  if (!request || !Array.isArray(request.messages)) throw new TranslationError('messages: Field required');
+  const messages: ChatMessage[] = [];
+  const system = textOfBlocks(request.system);
+  if (system) messages.push({ role: 'system', content: system });
+
+  for (const message of request.messages) {
+    const blocks: Block[] = typeof message.content === 'string' ? [{ type: 'text', text: message.content }] : message.content ?? [];
+    if (message.role === 'assistant') {
+      const text = blocks.filter(b => b.type === 'text').map(b => b.text).join('');
+      const calls = blocks.filter(b => b.type === 'tool_use').map(b => ({
+        id: String(b.id), type: 'function' as const, function: { name: String(b.name), arguments: JSON.stringify(b.input ?? {}) },
+      }));
+      // Thinking blocks are the model's private notes and are not sent on.
+      if (!text && !calls.length) continue;
+      messages.push({ role: 'assistant', content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
+      continue;
+    }
+    // Tool results answer the previous assistant turn, so they come first, as tool messages.
+    const images: ContentPart[] = [];
+    for (const block of blocks.filter(b => b.type === 'tool_result')) {
+      const content: Block[] = typeof block.content === 'string' ? [{ type: 'text', text: block.content }] : block.content ?? [];
+      const text = content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+      for (const image of content.filter(b => b.type === 'image')) {
+        const url = imageURL(image);
+        if (url) images.push({ type: 'image_url', image_url: { url } });
+      }
+      messages.push({ role: 'tool', tool_call_id: String(block.tool_use_id), content: `${block.is_error ? 'Error: ' : ''}${text || (images.length ? '(image below)' : '(no output)')}` });
+    }
+    const parts: ContentPart[] = [...images];
+    for (const block of blocks) {
+      if (block.type === 'text' && block.text) parts.push({ type: 'text', text: block.text });
+      else if (block.type === 'image') { const url = imageURL(block); if (url) parts.push({ type: 'image_url', image_url: { url } }); }
+      else if (block.type === 'document') parts.push({ type: 'text', text: documentText(block) });
+    }
+    if (parts.length) {
+      const onlyText = parts.every(p => p.type === 'text');
+      messages.push({ role: 'user', content: onlyText ? parts.map(p => (p as { text: string }).text).join('\n') : parts });
+    }
+  }
+
+  const tools = (request.tools ?? []).filter(clientTool).map(tool => ({
+    type: 'function', function: { name: tool.name, ...(tool.description ? { description: tool.description } : {}), parameters: tool.input_schema },
+  }));
+  const choice = request.tool_choice;
+  const toolChoice = !tools.length || !choice ? undefined
+    : choice.type === 'any' ? 'required' : choice.type === 'none' ? 'none'
+      : choice.type === 'tool' && choice.name ? { type: 'function', function: { name: choice.name } } : 'auto';
+
+  return {
+    model: request.model,
+    messages,
+    stream: true,
+    stream_options: { include_usage: true },
+    ...(request.max_tokens ? { max_tokens: request.max_tokens } : {}),
+    ...(typeof request.temperature === 'number' ? { temperature: request.temperature } : {}),
+    ...(typeof request.top_p === 'number' ? { top_p: request.top_p } : {}),
+    ...(request.stop_sequences?.length ? { stop: request.stop_sequences } : {}),
+    ...(tools.length ? { tools } : {}),
+    ...(toolChoice ? { tool_choice: toolChoice } : {}),
+    ...(tools.length && choice?.disable_parallel_tool_use ? { parallel_tool_calls: false } : {}),
+  };
+}
+
+/** A rough token count (four characters per token), for count_tokens and before the provider reports usage. */
+export function estimateTokens(request: AnthropicRequest): number {
+  const text = JSON.stringify([request.system ?? '', request.messages, (request.tools ?? []).filter(clientTool)]);
+  return Math.ceil(text.length / 4);
+}
+
+const STOP: Record<string, string> = { stop: 'end_turn', length: 'max_tokens', tool_calls: 'tool_use', function_call: 'tool_use', content_filter: 'refusal' };
+
+const event = (name: string, data: unknown) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
+const newId = (prefix: string) => `${prefix}${randomBytes(12).toString('base64url')}`;
+
+interface ToolCall { id: string; name: string; args: string }
+
+/**
+ * Turns an OpenAI chat stream into Anthropic events. Text streams as it arrives. Tool calls are
+ * collected and sent whole when the model finishes, because providers split their arguments in
+ * different ways and an Anthropic tool block cannot be reopened.
+ */
+export class AnthropicStream {
+  readonly id = newId('msg_');
+  private textOpen = false;
+  private index = 0;
+  private text = '';
+  private tools = new Map<number, ToolCall>();
+  private finish?: string;
+  private usage?: { input: number; output: number };
+  private stopped = false;
+
+  constructor(private model: string, private estimatedInput: number) {}
+
+  start(): string {
+    return event('message_start', {
+      type: 'message_start',
+      message: { id: this.id, type: 'message', role: 'assistant', model: this.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: this.estimatedInput, output_tokens: 0 } },
+    });
+  }
+
+  /** Events for one upstream record. */
+  push(record: SSERecord): string {
+    if (record.done || this.stopped) return '';
+    const json = record.json;
+    if (!json) return '';
+    if (json.error) {
+      this.stopped = true;
+      return event('error', { type: 'error', error: { type: 'api_error', message: String(json.error.message ?? 'The model stopped with an error.') } });
+    }
+    if (json.usage) this.usage = { input: Number(json.usage.prompt_tokens) || 0, output: Number(json.usage.completion_tokens) || 0 };
+    let out = '';
+    for (const choice of json.choices ?? []) {
+      const delta = choice.delta ?? {};
+      if (typeof delta.content === 'string' && delta.content) {
+        if (!this.textOpen) {
+          out += event('content_block_start', { type: 'content_block_start', index: this.index, content_block: { type: 'text', text: '' } });
+          this.textOpen = true;
+        }
+        this.text += delta.content;
+        out += event('content_block_delta', { type: 'content_block_delta', index: this.index, delta: { type: 'text_delta', text: delta.content } });
+      }
+      for (const call of delta.tool_calls ?? []) {
+        const at = Number.isInteger(call.index) ? call.index : this.tools.size;
+        const tool = this.tools.get(at) ?? { id: '', name: '', args: '' };
+        if (call.id) tool.id = call.id;
+        if (call.function?.name) tool.name += tool.name && tool.name === call.function.name ? '' : call.function.name;
+        if (typeof call.function?.arguments === 'string') tool.args += call.function.arguments;
+        this.tools.set(at, tool);
+      }
+      if (choice.finish_reason) this.finish = choice.finish_reason;
+    }
+    return out;
+  }
+
+  private stopReason(): string {
+    if (this.tools.size) return 'tool_use';
+    // OpenAI-style providers do not say which stop sequence ended the answer, so it reports as end_turn.
+    return STOP[this.finish ?? 'stop'] ?? 'end_turn';
+  }
+
+  /** The closing events: open text, the tool calls, the stop reason, and usage. */
+  end(): string {
+    if (this.stopped) return '';
+    this.stopped = true;
+    let out = '';
+    if (this.textOpen) { out += event('content_block_stop', { type: 'content_block_stop', index: this.index }); this.index++; }
+    for (const tool of this.content().filter(b => b.type === 'tool_use')) {
+      out += event('content_block_start', { type: 'content_block_start', index: this.index, content_block: { type: 'tool_use', id: tool.id, name: tool.name, input: {} } });
+      out += event('content_block_delta', { type: 'content_block_delta', index: this.index, delta: { type: 'input_json_delta', partial_json: JSON.stringify(tool.input) } });
+      out += event('content_block_stop', { type: 'content_block_stop', index: this.index });
+      this.index++;
+    }
+    if (this.index === 0) {
+      out += event('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
+      out += event('content_block_stop', { type: 'content_block_stop', index: 0 });
+    }
+    const usage = this.usage ?? { input: this.estimatedInput, output: Math.ceil(this.text.length / 4) };
+    out += event('message_delta', { type: 'message_delta', delta: { stop_reason: this.stopReason(), stop_sequence: null }, usage: { input_tokens: usage.input, output_tokens: usage.output } });
+    out += event('message_stop', { type: 'message_stop' });
+    return out;
+  }
+
+  /** The answer's content blocks, as a non-streaming response carries them. */
+  content(): Block[] {
+    const blocks: Block[] = [];
+    if (this.text) blocks.push({ type: 'text', text: this.text });
+    for (const tool of [...this.tools.entries()].sort(([a], [b]) => a - b).map(([, t]) => t)) {
+      let input: unknown = {};
+      try { input = tool.args.trim() ? JSON.parse(tool.args) : {}; } catch { input = { _raw_arguments: tool.args }; }
+      blocks.push({ type: 'tool_use', id: tool.id || newId('toolu_'), name: tool.name, input });
+      if (!tool.id) tool.id = blocks[blocks.length - 1].id;
+    }
+    return blocks;
+  }
+
+  /** A complete non-streaming message. */
+  message() {
+    const usage = this.usage ?? { input: this.estimatedInput, output: Math.ceil(this.text.length / 4) };
+    const content = this.content();
+    return {
+      id: this.id, type: 'message', role: 'assistant', model: this.model,
+      content: content.length ? content : [{ type: 'text', text: '' }],
+      stop_reason: this.stopReason(), stop_sequence: null,
+      usage: { input_tokens: usage.input, output_tokens: usage.output },
+    };
+  }
+}
+
+/** Anthropic's error body and status for a router error status. */
+export function anthropicError(status: number, message: string): { status: number; body: unknown } {
+  const type = status === 400 ? 'invalid_request_error' : status === 401 ? 'authentication_error' : status === 403 ? 'permission_error'
+    : status === 404 ? 'not_found_error' : status === 429 ? 'rate_limit_error' : status === 503 || status === 502 ? 'overloaded_error' : 'api_error';
+  // 529 is Anthropic's "overloaded", which Anthropic clients retry with backoff.
+  return { status: type === 'overloaded_error' ? 529 : status, body: { type: 'error', error: { type, message } } };
+}
