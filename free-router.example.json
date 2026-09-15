@@ -1,0 +1,10 @@
+{
+  "port": 4141,
+  "providers": [
+    { "id": "openrouter", "kind": "openrouter", "apiKey": "env:OPENROUTER_API_KEY" },
+    { "id": "groq", "kind": "groq", "apiKey": "env:GROQ_API_KEY", "billing": "none" },
+    { "id": "cerebras", "kind": "cerebras", "apiKey": "env:CEREBRAS_API_KEY", "billing": "none", "disabled": true },
+    { "id": "gemini", "kind": "gemini", "apiKey": "env:GEMINI_API_KEY", "billing": "none", "disabled": true },
+    { "id": "ollama", "kind": "ollama", "baseURL": "http://127.0.0.1:11434" }
+  ]
+}
