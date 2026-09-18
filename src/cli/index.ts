@@ -8,7 +8,7 @@ import { ConfigError } from '../providers/index.js';
 import { Health, profileTask, rank, Sessions } from '../routing/rank.js';
 import { createServer } from '../gateway/server.js';
 
-const HELP = `onerouter: one endpoint for every free AI model you have.
+const HELP = `ONE ROUTER: Inference, intelligently routed.
 
 Usage:
   onerouter serve [--port N] [--host H] [--config FILE]   Start the router

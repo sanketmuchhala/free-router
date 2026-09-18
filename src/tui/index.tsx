@@ -9,6 +9,80 @@ interface TUIProps {
   initialStatuses: ProviderStatus[];
 }
 
+const Header = () => (
+  <Box flexDirection="column" alignItems="center" marginBottom={1}>
+    <Text bold color="cyan">O N E   R O U T E R</Text>
+    <Text color="gray">inference control plane</Text>
+  </Box>
+);
+
+const MetricsRow = ({ statuses }: { statuses: ProviderStatus[] }) => {
+  const healthyCount = statuses.filter(s => s.ok).length;
+  return (
+    <Box borderStyle="single" borderColor="gray" paddingX={2} justifyContent="space-between" marginBottom={1}>
+      <Text><Text color="gray">HEALTH</Text>  <Text color="green">{healthyCount}/{statuses.length}</Text></Text>
+      <Text><Text color="gray">RPS</Text>     <Text color="cyan">0.0</Text></Text>
+      <Text><Text color="gray">P95</Text>     <Text color="cyan">0ms</Text></Text>
+      <Text><Text color="gray">SAVED</Text>   <Text color="cyan">$0.00</Text></Text>
+    </Box>
+  );
+};
+
+const Dashboard = ({ statuses, models, selectedIndex }: { statuses: ProviderStatus[], models: Ranked[], selectedIndex: number }) => {
+  const visibleModels = models.slice(0, 15);
+  
+  return (
+    <Box flexDirection="row" width="100%" marginBottom={1}>
+      {/* Providers Column */}
+      <Box width="30%" flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1} marginRight={1}>
+        <Box marginBottom={1}>
+          <Text color="gray" bold>PROVIDERS</Text>
+        </Box>
+        {statuses.map(status => (
+          <Box key={status.id} justifyContent="space-between">
+            <Text color="white">{status.id}</Text>
+            <Text color={status.ok ? 'green' : 'red'}>{status.ok ? '●' : '○'}</Text>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Models/Routes Column */}
+      <Box width="70%" flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
+        <Box marginBottom={1}>
+          <Text color="gray" bold>LIVE ROUTES (Best First)</Text>
+        </Box>
+        {visibleModels.map((m, i) => {
+          const isSelected = i === selectedIndex;
+          const bg = isSelected ? 'cyan' : undefined;
+          const fg = isSelected ? 'black' : 'white';
+          
+          return (
+            <Box key={m.model.ref} backgroundColor={bg} justifyContent="space-between">
+              <Text color={fg} wrap="truncate-end">
+                {m.model.ref.length > 35 ? m.model.ref.slice(0, 33) + '…' : m.model.ref}
+              </Text>
+              <Text color={isSelected ? 'black' : 'gray'}>
+                {m.why[0] || 'balanced'}
+              </Text>
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+};
+
+const Traces = () => (
+  <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
+    <Box marginBottom={1}>
+      <Text color="gray" bold>RECENT TRACES</Text>
+    </Box>
+    <Box justifyContent="space-between">
+      <Text color="gray">Waiting for requests...</Text>
+    </Box>
+  </Box>
+);
+
 const TUI: React.FC<TUIProps> = ({ catalog, health, initialStatuses }) => {
   const [taskMode, setTaskMode] = useState<'chat' | 'code'>('chat');
   const [models, setModels] = useState<Ranked[]>([]);
@@ -22,21 +96,18 @@ const TUI: React.FC<TUIProps> = ({ catalog, health, initialStatuses }) => {
     
     const { ranked } = rank(catalog.models(), task, health);
     setModels(ranked);
-    setSelectedIndex(0);
   };
   
   useEffect(() => {
     refreshRankings();
   }, [taskMode, catalog]);
 
-  const visibleModels = models.slice(0, 15);
-  const selectedModel = visibleModels[selectedIndex];
-
   useInput((input, key) => {
     if (input === 'c') setTaskMode('chat');
     if (input === 'a') setTaskMode('code');
-    if (input === 'q') process.exit(0);
+    if (input === 'q' || key.escape) process.exit(0);
 
+    const visibleModels = models.slice(0, 15);
     if (key.upArrow) {
       setSelectedIndex(Math.max(0, selectedIndex - 1));
     }
@@ -46,106 +117,13 @@ const TUI: React.FC<TUIProps> = ({ catalog, health, initialStatuses }) => {
   });
 
   return (
-    <Box flexDirection="column" padding={1}>
-      {/* Header */}
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold color="cyan">🚀 onerouter</Text>
-        <Text color="gray">
-          {taskMode === 'chat' ? <Text color="green" bold>[C]hat</Text> : '[C]hat'} |{' '}
-          {taskMode === 'code' ? <Text color="green" bold>[A]gents</Text> : '[A]gents'} |{' '}
-          [Q]uit
-        </Text>
-      </Box>
-
-      {/* Middle Section: Providers & Details */}
-      <Box marginBottom={1} width="100%">
-        {/* Providers */}
-        <Box width="50%" flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
-          <Box borderBottom={false} marginBottom={1}>
-            <Text bold color="magenta">Providers ({statuses.length})</Text>
-          </Box>
-          {statuses.map(status => (
-            <Box key={status.id} justifyContent="space-between">
-              <Text color={status.ok ? 'white' : 'red'}>{status.id}</Text>
-              <Text color={status.ok ? 'green' : 'red'}>
-                {status.ok ? `${status.free}/${status.listed}` : 'Err'}
-              </Text>
-            </Box>
-          ))}
-        </Box>
-
-        {/* Details */}
-        <Box width="50%" flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} marginLeft={1}>
-          <Box borderBottom={false} marginBottom={1}>
-            <Text bold color="magenta">Model Details</Text>
-          </Box>
-          {selectedModel ? (
-            <>
-              <Text bold color="white">{selectedModel.model.ref}</Text>
-              <Text color="gray">Score: <Text color="yellow">{selectedModel.score.toFixed(2)}</Text></Text>
-              <Text color="gray">Context: <Text color="white">{selectedModel.model.contextLength ? `${Math.round(selectedModel.model.contextLength / 1000)}k` : 'Unknown'}</Text></Text>
-              <Text color="gray">Price: <Text color={selectedModel.model.price === 'zero-price' ? 'green' : 'white'}>{selectedModel.model.price}</Text></Text>
-              <Box marginTop={1} flexDirection="column">
-                <Text color="gray">Capabilities:</Text>
-                <Text color="white">  Tools: {selectedModel.model.capabilities.tools ? '✅' : '❌'}</Text>
-                <Text color="white">  Vision: {selectedModel.model.capabilities.vision ? '✅' : '❌'}</Text>
-              </Box>
-            </>
-          ) : (
-            <Text color="gray">No model selected</Text>
-          )}
-        </Box>
-      </Box>
-
-      {/* Table */}
-      <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Box borderBottom={false} marginBottom={1}>
-          <Text bold color="yellow">Top Free Models (Best First)</Text>
-        </Box>
-        
-        {/* Table Header */}
-        <Box>
-          <Box width="3%"><Text dimColor>#</Text></Box>
-          <Box width="35%"><Text bold>Model</Text></Box>
-          <Box width="10%"><Text bold>Ctx</Text></Box>
-          <Box width="10%"><Text bold>Price</Text></Box>
-          <Box width="42%"><Text bold>Why</Text></Box>
-        </Box>
-        
-        {/* Table Rows */}
-        {visibleModels.map((m, i) => {
-          const isSelected = i === selectedIndex;
-          const bg = isSelected ? 'cyan' : undefined;
-          const fg = isSelected ? 'black' : (i < 3 ? 'green' : 'white');
-
-          return (
-            <Box key={m.model.ref} backgroundColor={bg}>
-              <Box width="3%">
-                <Text color={isSelected ? 'black' : 'gray'}>{i + 1}</Text>
-              </Box>
-              <Box width="35%">
-                <Text color={fg} bold={isSelected}>
-                  {m.model.ref.length > 33 ? m.model.ref.slice(0, 31) + '…' : m.model.ref}
-                </Text>
-              </Box>
-              <Box width="10%">
-                <Text color={isSelected ? 'black' : 'gray'}>
-                  {m.model.contextLength ? `${Math.round(m.model.contextLength / 1000)}k` : '?'}
-                </Text>
-              </Box>
-              <Box width="10%">
-                <Text color={isSelected ? 'black' : 'gray'}>
-                  {m.model.price === 'zero-price' ? 'free' : m.model.price}
-                </Text>
-              </Box>
-              <Box width="42%">
-                <Text color={isSelected ? 'black' : 'gray'} wrap="truncate-end">
-                  {m.why.join(', ')}
-                </Text>
-              </Box>
-            </Box>
-          );
-        })}
+    <Box flexDirection="column" padding={1} width={80}>
+      <Header />
+      <MetricsRow statuses={statuses} />
+      <Dashboard statuses={statuses} models={models} selectedIndex={selectedIndex} />
+      <Traces />
+      <Box marginTop={1} justifyContent="center">
+        <Text color="gray">[↑↓] Navigate   [C]hat/[A]gent routes   [Q]uit</Text>
       </Box>
     </Box>
   );
