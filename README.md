@@ -1,7 +1,10 @@
-# ONE ROUTER
-**Inference, intelligently routed.**
+<div align="center">
+  <h1>O N E &nbsp; R O U T E R</h1>
+  <p><b>Inference, intelligently routed.</b></p>
+  <br />
+</div>
 
-One Router is an inference control plane for routing models, compute, context and agent workloads across local and cloud infrastructure.
+**One Router** is an inference control plane for routing models, compute, context, and agent workloads across local and cloud infrastructure.
 
 It is designed to become a next-generation inference orchestration system. Rather than being a thin API gateway or a cosmetic model dropdown, One Router is built on the thesis that inference should be managed like an operating system control plane.
 
@@ -23,47 +26,98 @@ request/workflow
 → return response
 ```
 
-![One Router Control Plane (Conceptual)](https://via.placeholder.com/800x400.png?text=One+Router+Dashboard)
+---
 
-## Getting Started
+<div align="center">
+  <!-- TODO: Replace with an actual GIF recorded using a tool like LICEcap, Asciinema, or VHS -->
+  <img src="https://raw.githubusercontent.com/sanketmuchhala/one-router/main/docs/assets/demo.gif" alt="One Router TUI Dashboard Demo" width="800" />
+  <p><em>The beautiful One Router Terminal User Interface (TUI). Run <code>onerouter models</code> to see it live.</em></p>
+</div>
 
-### 1. Install
+---
+
+## ⚡ Features
+
+- 🧠 **Automatic Workload Profiling**: Analyzes if your request is a chat message or complex agentic code execution, and dynamically selects the best provider.
+- 🎨 **Beautiful Modern TUI**: A gorgeous, fully-featured terminal dashboard with real-time health metrics, P95 latency tracking, cost-saving calculations, and live routing tables.
+- 🔑 **API Key Management**: Generate secure Bearer tokens for your clients using the built-in keystore.
+- 🌐 **Global Command-Line Interface**: Run `onerouter` natively from any directory on your machine.
+- 🧩 **Multi-Provider Support**: Built-in support for OpenRouter, Groq, Cerebras, Gemini, Mistral, SambaNova, Hugging Face, Ollama, and generic OpenAI-compatible endpoints.
+
+## 🚀 Getting Started
+
+### 1. Install & Link
+
+Clone the repository and install it globally so you can run the `onerouter` command from anywhere:
+
 ```bash
-git clone https://github.com/sanketmuchhala/onerouter.git
-cd onerouter
+git clone https://github.com/sanketmuchhala/one-router.git
+cd one-router
 pnpm install
 pnpm build
+npm link    # Maps the 'onerouter' command globally
 ```
 
-### 2. Configure
+### 2. Configure Providers
+
+You can either pass keys through a `.env` file or configure them directly via the CLI:
+
 ```bash
-# Optional: create a default config in ~/.onerouter/config.json
-node dist/cli/index.js init
+# Initialize a global config at ~/.onerouter/config.json
+onerouter init
 ```
-Without a config file, One Router will read standard environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`) and automatically detect local Ollama or llama.cpp instances.
 
-### 3. Start
+*Note: You can easily edit `~/.onerouter/config.json` to hardcode your exact API keys, or use `env:PROVIDER_API_KEY` syntax if you prefer to export environment variables in your shell.*
+
+### 3. Generate an Auth Token
+
+One Router acts as a secure local API gateway. You will need to generate a Bearer Token for your clients (like cURL, Aider, Cline, etc.) to use.
+
 ```bash
-# Launch the Gateway
-node dist/cli/index.js serve
+onerouter key create my-key
 ```
 
-### 4. TUI Dashboard
+*Copy the generated `fr_...` key. It will only be shown once.*
+
+### 4. Start the Inference Server
+
+Start the API Gateway:
+
 ```bash
-# Launch the inference control plane
-pnpm start
+onerouter serve
 ```
 
-### 5. Send a Request
-Use standard OpenAI-compatible tooling (cURL, SDKs, or agents like Aider/Cline). Point them to `http://127.0.0.1:4141/v1` with the model `onerouter/auto`.
+The gateway runs seamlessly on `http://127.0.0.1:4141/v1`.
+
+### 5. Launch the TUI Dashboard
+
+Open a separate terminal window and launch the interactive Control Plane:
+
+```bash
+onerouter models
+```
+
+This gorgeous dashboard allows you to:
+- See which providers are **ONLINE**.
+- Track live **P95 Latencies** and **RPS**.
+- Monitor the **Best Ranked Models** based on live heuristics.
+- Switch between **Chat Routes** and **Agent Routes**.
+
+### 6. Send a Request
+
+Use standard OpenAI-compatible tooling. Point them to `http://127.0.0.1:4141/v1` and set the model to `onerouter/auto`.
 
 ```bash
 curl http://127.0.0.1:4141/v1/chat/completions \
-  -H "Authorization: Bearer <your_key_here>" \
-  -d '{"model":"onerouter/auto","messages":[{"role":"user","content":"Hi"}]}'
+  -H "Authorization: Bearer <your_generated_key_here>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "onerouter/auto",
+    "messages": [{"role": "user", "content": "Hi, what can you do?"}]
+  }'
 ```
 
-## Documentation
+## 📚 Documentation
 
 Dive deeper into the architecture and capabilities of One Router:
 
@@ -75,5 +129,5 @@ Dive deeper into the architecture and capabilities of One Router:
 - [Telemetry](docs/TELEMETRY.md)
 - [Roadmap](docs/ROADMAP.md)
 
-## License
+## 📄 License
 MIT
