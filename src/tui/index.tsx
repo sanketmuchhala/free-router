@@ -7,6 +7,7 @@ interface TUIProps {
   catalog: Catalog;
   health: Health;
   initialStatuses: ProviderStatus[];
+  telemetry?: any;
 }
 
 const Header = () => (
@@ -16,14 +17,14 @@ const Header = () => (
   </Box>
 );
 
-const MetricsRow = ({ statuses }: { statuses: ProviderStatus[] }) => {
+const MetricsRow = ({ statuses, telemetry }: { statuses: ProviderStatus[], telemetry?: any }) => {
   const healthyCount = statuses.filter(s => s.ok).length;
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={2} justifyContent="space-between" marginBottom={1}>
       <Text><Text color="gray">HEALTH</Text>  <Text color="green">{healthyCount}/{statuses.length}</Text></Text>
-      <Text><Text color="gray">RPS</Text>     <Text color="cyan">0.0</Text></Text>
-      <Text><Text color="gray">P95</Text>     <Text color="cyan">0ms</Text></Text>
-      <Text><Text color="gray">SAVED</Text>   <Text color="cyan">$0.00</Text></Text>
+      <Text><Text color="gray">RPS</Text>     <Text color="cyan">{telemetry ? telemetry.getMetrics().rps.toFixed(1) : "0.0"}</Text></Text>
+      <Text><Text color="gray">P95</Text>     <Text color="cyan">{telemetry ? telemetry.getMetrics().p95.toFixed(0) : 0}ms</Text></Text>
+      <Text><Text color="gray">SAVED</Text>   <Text color="cyan">${telemetry ? telemetry.getMetrics().saved.toFixed(2) : "0.00"}</Text></Text>
     </Box>
   );
 };
@@ -119,7 +120,7 @@ const TUI: React.FC<TUIProps> = ({ catalog, health, initialStatuses }) => {
   return (
     <Box flexDirection="column" padding={1} width={80}>
       <Header />
-      <MetricsRow statuses={statuses} />
+      <MetricsRow statuses={statuses} telemetry={undefined} />
       <Dashboard statuses={statuses} models={models} selectedIndex={selectedIndex} />
       <Traces />
       <Box marginTop={1} justifyContent="center">
