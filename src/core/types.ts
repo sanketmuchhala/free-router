@@ -25,7 +25,7 @@ export interface RouterConfig {
   host: string;
   port: number;
   providers: ProviderConfig[];
-  /** Model names the router does not know (such as "claude-sonnet-4") are routed like free-router/auto. */
+  /** Model names the router does not know (such as "claude-sonnet-4") are routed like onerouter/auto. */
   routeUnknownModels: boolean;
   /** Models tried per request before giving up. */
   maxAttempts: number;
@@ -109,3 +109,50 @@ export type ContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } }
   | { type: string; [key: string]: unknown };
+
+// --- ONE ROUTER ADVANCED CONCEPTS ---
+export interface RoutingPolicy {
+  strategy: 'balanced' | 'lowest-cost' | 'lowest-latency' | 'highest-quality' | 'local-first' | 'hedged' | 'reasoning-budget';
+  requirements?: {
+    tools?: boolean;
+    vision?: boolean;
+    context?: number;
+    reasoning?: boolean;
+    local_only?: boolean;
+  };
+  budget?: {
+    max_cost?: number;
+    p95_ms?: number;
+  };
+}
+
+export interface RouteDecision {
+  provider: string;
+  model: string;
+  score: {
+    latency: number;
+    cost: number;
+    quality: number;
+    total: number;
+  };
+  reason: string;
+  alternatives: { provider: string; model: string; score: number }[];
+}
+
+export interface TraceContext {
+  traceId: string;
+  sessionId?: string;
+  policy: RoutingPolicy;
+  startedAt: number;
+  events: TraceEvent[];
+}
+
+export type TraceEvent = 
+  | { type: 'route_selected'; decision: RouteDecision; timestamp: number }
+  | { type: 'dispatched'; provider: string; model: string; timestamp: number }
+  | { type: 'first_token'; provider: string; model: string; timestamp: number }
+  | { type: 'hedge_launched'; provider: string; model: string; timestamp: number }
+  | { type: 'hedge_winner'; provider: string; model: string; timestamp: number }
+  | { type: 'cancelled'; provider: string; model: string; timestamp: number }
+  | { type: 'completed'; provider: string; model: string; totalLatency: number; ttft: number; cost: number; timestamp: number }
+  | { type: 'failed'; provider: string; model: string; error: string; timestamp: number };

@@ -1,14 +1,14 @@
 import { createHash } from 'crypto';
-import type { Catalog } from './catalog.js';
-import { FALLBACK, failureFromRecord, failureFromStatus, failureFromThrown, UpstreamError } from './errors.js';
+import type { Catalog } from '../providers/catalog.js';
+import { FALLBACK, failureFromRecord, failureFromStatus, failureFromThrown, UpstreamError } from '../core/errors.js';
 import { accountOf, Health, profileTask, promptTokens, rank, Ranked, Ranking, RESERVED_OUTPUT, Sessions, sessionKey } from './rank.js';
-import type { CatalogModel, ChatMessage, ChatRequest, Failure, RouterConfig } from './types.js';
+import type { CatalogModel, ChatMessage, ChatRequest, Failure, RouterConfig } from '../core/types.js';
 
 type FetchFn = typeof fetch;
 
 /** Names that ask the router to choose. */
-export const AUTO_MODELS = new Set(['free-router/auto', 'free-router', 'auto', 'free']);
-export const AUTO_MODEL = 'free-router/auto';
+export const AUTO_MODELS = new Set(['onerouter/auto', 'onerouter', 'auto', 'free']);
+export const AUTO_MODEL = 'onerouter/auto';
 
 export interface RouteDeps {
   catalog: Catalog;
@@ -206,7 +206,7 @@ export async function route(request: ChatRequest, deps: RouteDeps, options: { si
     try {
       const response = await fetchImpl(`${model.provider.chatURL}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...model.provider.headers, ...(model.provider.kind === 'openrouter' ? { 'X-Title': 'free-router' } : {}) },
+        headers: { 'Content-Type': 'application/json', ...model.provider.headers, ...(model.provider.kind === 'openrouter' ? { 'X-Title': 'onerouter' } : {}) },
         body: JSON.stringify(upstreamBody(request, model)),
         redirect: 'error',
         signal: controller.signal,

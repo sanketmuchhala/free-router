@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
-import type { SSERecord } from './route.js';
-import type { ChatMessage, ChatRequest, ContentPart } from './types.js';
+import type { SSERecord } from '../routing/index.js';
+import type { ChatMessage, ChatRequest, ContentPart } from '../core/types.js';
 
 // Clients built for Anthropic's Messages API (Claude Code, the Anthropic SDKs) talk to the router
 // as if it were Anthropic. Requests become OpenAI chat completions for the free providers, and

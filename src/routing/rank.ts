@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { CatalogModel, ChatMessage, Failure, FailureCategory, Provider, TaskKind, TaskProfile } from './types.js';
+import type { CatalogModel, ChatMessage, Failure, FailureCategory, Provider, TaskKind, TaskProfile } from '../core/types.js';
 
 // ---------------------------------------------------------------------------
 // What a request needs

@@ -2,13 +2,13 @@ import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Catalog, priceOf } from '../src/catalog.js';
-import { loadConfig, providersFromEnv } from '../src/config.js';
-import { KeyStore } from '../src/keys.js';
-import { resolveProvider } from '../src/providers.js';
-import { parameterBillions, profileTask, sessionKey } from '../src/rank.js';
-import { mistralId, upstreamBody } from '../src/route.js';
-import type { CatalogModel, ChatRequest } from '../src/types.js';
+import { Catalog, priceOf } from '../src/providers/catalog.js';
+import { loadConfig, providersFromEnv } from '../src/config/index.js';
+import { KeyStore } from '../src/core/keys.js';
+import { resolveProvider } from '../src/providers/index.js';
+import { parameterBillions, profileTask, sessionKey } from '../src/routing/rank.js';
+import { mistralId, upstreamBody } from '../src/routing/index.js';
+import type { CatalogModel, ChatRequest } from '../src/core/types.js';
 import { fakeProvider } from './helpers.js';
 
 let fake: Awaited<ReturnType<typeof fakeProvider>>;
@@ -111,7 +111,7 @@ describe('requests', () => {
     provider: resolveProvider({ id: kind, kind, apiKey: 'k' }), model: 'm', ref: `${kind}/m`, capabilities: { tools: true, vision: false }, price: 'unknown',
   });
   const request: ChatRequest = {
-    model: 'free-router/auto', max_tokens: 100, stream: true, stream_options: { include_usage: true },
+    model: 'onerouter/auto', max_tokens: 100, stream: true, stream_options: { include_usage: true },
     messages: [
       { role: 'assistant', content: null, tool_calls: [{ id: 'toolu_01ABCdef', type: 'function', function: { name: 'f', arguments: '{}' } }] },
       { role: 'tool', tool_call_id: 'toolu_01ABCdef', content: 'ok' },

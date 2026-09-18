@@ -1,5 +1,5 @@
-import { LABEL, redact } from './providers.js';
-import type { CatalogModel, PriceClass, Provider } from './types.js';
+import { LABEL, redact } from './index.js';
+import type { CatalogModel, PriceClass, Provider } from '../core/types.js';
 
 type FetchFn = typeof fetch;
 

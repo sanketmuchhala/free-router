@@ -1,11 +1,11 @@
 import http from 'http';
 import type { AddressInfo } from 'net';
-import { Catalog } from '../src/catalog.js';
-import { DEFAULTS } from '../src/config.js';
-import { resolveProvider } from '../src/providers.js';
-import { Health, Sessions } from '../src/rank.js';
-import { createServer } from '../src/server.js';
-import type { ProviderConfig, RouterConfig } from '../src/types.js';
+import { Catalog } from '../src/providers/catalog.js';
+import { DEFAULTS } from '../src/config/index.js';
+import { resolveProvider } from '../src/providers/index.js';
+import { Health, Sessions } from '../src/routing/rank.js';
+import { createServer } from '../src/gateway/server.js';
+import type { ProviderConfig, RouterConfig } from '../src/core/types.js';
 
 export interface LoggedCall { path: string; model: string; body: any; headers: http.IncomingHttpHeaders }
 

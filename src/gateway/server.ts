@@ -1,8 +1,8 @@
 import http, { IncomingMessage, ServerResponse } from 'http';
-import { AnthropicRequest, AnthropicStream, anthropicError, estimateTokens, toChatRequest, TranslationError } from './anthropic.js';
-import type { Catalog } from './catalog.js';
-import { AUTO_MODEL, route, RouteDeps, RouteError, Routed } from './route.js';
-import type { ChatRequest } from './types.js';
+import { AnthropicRequest, AnthropicStream, anthropicError, estimateTokens, toChatRequest, TranslationError } from '../providers/anthropic.js';
+import type { Catalog } from '../providers/catalog.js';
+import { AUTO_MODEL, route, RouteDeps, RouteError, Routed } from '../routing/index.js';
+import type { ChatRequest } from '../core/types.js';
 
 export interface ServerDeps extends RouteDeps {
   catalog: Catalog;
@@ -48,7 +48,7 @@ function openAIError(res: ServerResponse, status: number, message: string, code 
   sendJSON(res, status, { error: { message, type: code, code } }, retryAfterMs !== undefined ? { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } : {});
 }
 
-const routedHeaders = (routed: Routed) => ({ 'x-free-router-model': routed.model.ref, 'x-free-router-attempts': String(routed.attempts.length) });
+const routedHeaders = (routed: Routed) => ({ 'x-onerouter-model': routed.model.ref, 'x-onerouter-attempts': String(routed.attempts.length) });
 
 const describeAttempts = (attempts: { ref: string; ok: boolean; reason?: string }[]) =>
   attempts.map(a => a.ok ? a.ref : `${a.ref} failed (${(a.reason ?? '').slice(0, 80)})`).join(' → ');
@@ -59,14 +59,14 @@ export function createServer(deps: ServerDeps): http.Server {
   const models = (req: IncomingMessage, res: ServerResponse) => {
     const list = deps.catalog.models();
     if (isAnthropicClient(req)) {
-      const data = [{ type: 'model', id: AUTO_MODEL, display_name: 'Free Router (best free model)', created_at: '2026-01-01T00:00:00Z' },
+      const data = [{ type: 'model', id: AUTO_MODEL, display_name: 'One Router (best free model)', created_at: '2026-01-01T00:00:00Z' },
         ...list.map(m => ({ type: 'model', id: m.ref, display_name: m.ref, created_at: '2026-01-01T00:00:00Z' }))];
       sendJSON(res, 200, { data, has_more: false, first_id: data[0]?.id ?? null, last_id: data.at(-1)?.id ?? null });
       return;
     }
     sendJSON(res, 200, {
       object: 'list',
-      data: [{ id: AUTO_MODEL, object: 'model', created: 0, owned_by: 'free-router' },
+      data: [{ id: AUTO_MODEL, object: 'model', created: 0, owned_by: 'onerouter' },
         ...list.map(m => ({ id: m.ref, object: 'model', created: 0, owned_by: m.provider.id, ...(m.contextLength ? { context_length: m.contextLength } : {}) }))],
     });
   };
@@ -76,7 +76,7 @@ export function createServer(deps: ServerDeps): http.Server {
     if (!Array.isArray(body?.messages) || !body.messages.length) throw new HttpError(400, 'messages must be a non-empty list.');
     const controller = new AbortController();
     res.on('close', () => { if (!res.writableFinished) controller.abort(); });
-    const session = typeof req.headers['x-free-router-session'] === 'string' ? req.headers['x-free-router-session'] : undefined;
+    const session = typeof req.headers['x-onerouter-session'] === 'string' ? req.headers['x-onerouter-session'] : undefined;
     let routed: Routed;
     try {
       routed = await route({ ...body, model: body.model ?? AUTO_MODEL }, deps, { signal: controller.signal, session });
@@ -115,7 +115,7 @@ export function createServer(deps: ServerDeps): http.Server {
     catch (error) { if (error instanceof TranslationError) { fail(400, error.message); return; } throw error; }
     const controller = new AbortController();
     res.on('close', () => { if (!res.writableFinished) controller.abort(); });
-    const header = req.headers['x-free-router-session'];
+    const header = req.headers['x-onerouter-session'];
     const session = typeof header === 'string' ? header : body.metadata?.user_id;
     let routed: Routed;
     try {
@@ -166,7 +166,7 @@ export function createServer(deps: ServerDeps): http.Server {
         sendJSON(res, 200, { ok: true, models: deps.catalog.models().length, providers: statuses.map(({ id, kind, ok, free, error }) => ({ id, kind, ok, free, ...(error ? { error } : {}) })) });
         return;
       }
-      if (!deps.authorize(presentedKey(req))) throw new HttpError(401, 'Missing or invalid API key. Create one with: free-router key create');
+      if (!deps.authorize(presentedKey(req))) throw new HttpError(401, 'Missing or invalid API key. Create one with: onerouter key create');
       if (req.method === 'GET' && path === '/v1/models') { models(req, res); return; }
       if (req.method === 'POST' && path === '/v1/chat/completions') { await chatCompletions(req, res, started); return; }
       if (req.method === 'POST' && path === '/v1/messages') { await messages(req, res, started); return; }

@@ -1,12 +1,12 @@
 {
-  "name": "free-router",
+  "name": "onerouter",
   "version": "0.1.0",
   "description": "One OpenAI- and Anthropic-compatible endpoint for every free AI model you have. Picks the best free model for each request and falls back when one is rate limited.",
   "type": "module",
   "license": "MIT",
   "author": "Sanket Muchhala",
   "bin": {
-    "free-router": "dist/cli.js"
+    "onerouter": "dist/cli/index.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,17 +20,17 @@
     "dist",
     "README.md",
     "LICENSE",
-    "free-router.example.json"
+    "onerouter.example.json"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pnpm build && node dist/cli.js serve",
+    "dev": "pnpm build && node --env-file=.env dist/cli/index.js serve",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node dist/cli.js serve"
+    "start": "node --env-file=.env dist/cli/index.js serve"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
@@ -44,5 +44,10 @@
   "dependencies": {
     "ink": "^7.1.1",
     "react": "^19.3.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

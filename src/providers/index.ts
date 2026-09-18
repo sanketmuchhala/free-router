@@ -1,4 +1,4 @@
-import type { Provider, ProviderConfig, ProviderKind } from './types.js';
+import type { Provider, ProviderConfig, ProviderKind } from '../core/types.js';
 
 export const PROVIDER_KINDS: readonly ProviderKind[] = [
   'openrouter', 'groq', 'cerebras', 'gemini', 'mistral', 'sambanova', 'huggingface', 'ollama', 'openai-compatible',

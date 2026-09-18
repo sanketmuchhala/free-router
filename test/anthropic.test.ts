@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { toChatRequest, AnthropicStream } from '../src/anthropic.js';
+import { toChatRequest, AnthropicStream } from '../src/providers/anthropic.js';
 import { fakeProvider, startRouter, TEST_KEY } from './helpers.js';
 
 let fake: Awaited<ReturnType<typeof fakeProvider>>;
@@ -73,7 +73,7 @@ describe('Anthropic-compatible endpoint', () => {
     const count = await client.messages.countTokens({ model: 'claude-sonnet-4-5', messages: [{ role: 'user', content: 'x'.repeat(400) }] });
     expect(count.input_tokens).toBeGreaterThan(90);
     const models = await client.models.list();
-    expect(models.data.map(m => m.id)).toEqual(['free-router/auto', 'local/limit-70b', 'local/ok-8b']);
+    expect(models.data.map(m => m.id)).toEqual(['onerouter/auto', 'local/limit-70b', 'local/ok-8b']);
 
     const unauthorized = new Anthropic({ baseURL: router.base, apiKey: 'wrong', maxRetries: 0 });
     await expect(unauthorized.messages.create({ model: 'x', max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] })).rejects.toBeInstanceOf(Anthropic.AuthenticationError);
