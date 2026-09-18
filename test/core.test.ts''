@@ -7,7 +7,7 @@ import { loadConfig, providersFromEnv } from '../src/config/index.js';
 import { KeyStore } from '../src/core/keys.js';
 import { resolveProvider } from '../src/providers/index.js';
 import { parameterBillions, profileTask, sessionKey } from '../src/routing/rank.js';
-import { mistralId, upstreamBody } from '../src/routing/index.js';
+import { mistralId, upstreamBody } from '../src/route.js';
 import type { CatalogModel, ChatRequest } from '../src/core/types.js';
 import { fakeProvider } from './helpers.js';
 

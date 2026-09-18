@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { render, Box, Text, useInput } from 'ink';
-import { Catalog, ProviderStatus } from './catalog.js';
+import { Catalog, ProviderStatus } from '../providers/catalog.js';
 import { Health, profileTask, rank, Ranked } from './rank.js';
 
 interface TUIProps {
@@ -49,7 +49,7 @@ const TUI: React.FC<TUIProps> = ({ catalog, health, initialStatuses }) => {
     <Box flexDirection="column" padding={1}>
       {/* Header */}
       <Box marginBottom={1} justifyContent="space-between">
-        <Text bold color="cyan">🚀 free-router</Text>
+        <Text bold color="cyan">🚀 onerouter</Text>
         <Text color="gray">
           {taskMode === 'chat' ? <Text color="green" bold>[C]hat</Text> : '[C]hat'} |{' '}
           {taskMode === 'code' ? <Text color="green" bold>[A]gents</Text> : '[A]gents'} |{' '}

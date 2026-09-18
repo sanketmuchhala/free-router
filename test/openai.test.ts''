@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Health } from '../src/routing/rank.js';
+import { Health } from '../src/rank.js';
 import { fakeProvider, startRouter, TEST_KEY } from './helpers.js';
 
 let fake: Awaited<ReturnType<typeof fakeProvider>>;

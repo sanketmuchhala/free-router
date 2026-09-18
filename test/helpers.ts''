@@ -5,7 +5,7 @@ import { DEFAULTS } from '../src/config/index.js';
 import { resolveProvider } from '../src/providers/index.js';
 import { Health, Sessions } from '../src/routing/rank.js';
 import { createServer } from '../src/gateway/server.js';
-import type { ProviderConfig, RouterConfig } from '../src/core/types.js';
+import type { ProviderConfig, RouterConfig } from '../src/types.js';
 
 export interface LoggedCall { path: string; model: string; body: any; headers: http.IncomingHttpHeaders }
 

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { toChatRequest, AnthropicStream } from '../src/providers/anthropic.js';
+import { toChatRequest, AnthropicStream } from '../src/anthropic.js';
 import { fakeProvider, startRouter, TEST_KEY } from './helpers.js';
 
 let fake: Awaited<ReturnType<typeof fakeProvider>>;

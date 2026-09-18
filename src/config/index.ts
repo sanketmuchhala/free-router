@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { ConfigError, ENV_KEYS, PROVIDER_KINDS, resolveProvider } from './providers.js';
-import type { Provider, ProviderConfig, ProviderKind, RouterConfig } from './types.js';
+import { ConfigError, ENV_KEYS, PROVIDER_KINDS, resolveProvider } from '../providers/index.js';
+import type { Provider, ProviderConfig, ProviderKind, RouterConfig } from '../core/types.js';
 
 export const DEFAULTS = {
   host: '127.0.0.1',
@@ -13,9 +13,9 @@ export const DEFAULTS = {
   refreshMinutes: 30,
 } as const;
 
-/** Where keys and the config file live: FREE_ROUTER_HOME, or ~/.free-router. */
+/** Where keys and the config file live: FREE_ROUTER_HOME, or ~/.onerouter. */
 export function homeDir(env: NodeJS.ProcessEnv = process.env): string {
-  const dir = env.FREE_ROUTER_HOME || join(homedir(), '.free-router');
+  const dir = env.FREE_ROUTER_HOME || join(homedir(), '.onerouter');
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   return dir;
 }

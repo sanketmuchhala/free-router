@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { Catalog } from './catalog.js';
-import { homeDir, loadConfig } from './config.js';
-import { KeyStore } from './keys.js';
-import { ConfigError } from './providers.js';
-import { Health, profileTask, rank, Sessions } from './rank.js';
-import { createServer } from './server.js';
+import { Catalog } from '../providers/catalog.js';
+import { homeDir, loadConfig } from '../config/index.js';
+import { KeyStore } from '../core/keys.js';
+import { ConfigError } from '../providers/index.js';
+import { Health, profileTask, rank, Sessions } from '../routing/rank.js';
+import { createServer } from '../gateway/server.js';
 
-const HELP = `free-router: one endpoint for every free AI model you have.
+const HELP = `onerouter: one endpoint for every free AI model you have.
 
 Usage:
-  free-router serve [--port N] [--host H] [--config FILE]   Start the router
-  free-router models [--config FILE]                        List the free models it found, best first
-  free-router key create [NAME]                             Make an API key for a client (shown once)
-  free-router key list                                      List keys
-  free-router key revoke ID                                 Revoke a key
-  free-router init                                          Write an example config to ~/.free-router/config.json
+  onerouter serve [--port N] [--host H] [--config FILE]   Start the router
+  onerouter models [--config FILE]                        List the free models it found, best first
+  onerouter key create [NAME]                             Make an API key for a client (shown once)
+  onerouter key list                                      List keys
+  onerouter key revoke ID                                 Revoke a key
+  onerouter init                                          Write an example config to ~/.onerouter/config.json
 
 Without a config file, providers come from environment variables: OPENROUTER_API_KEY, GROQ_API_KEY,
 CEREBRAS_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY, SAMBANOVA_API_KEY, HF_TOKEN. Ollama and LM Studio on
@@ -54,13 +54,13 @@ async function serve(args: string[]) {
   for (const status of await catalog.refresh()) {
     console.log(`  ${status.id.padEnd(12)} ${status.ok ? `${status.free} free of ${status.listed} models` : `unavailable: ${status.error}`}`);
   }
-  if (!catalog.models().length) console.log('\nNo free models yet. Add a provider key (see free-router --help); the router keeps checking.');
+  if (!catalog.models().length) console.log('\nNo free models yet. Add a provider key (see onerouter --help); the router keeps checking.');
   const server = createServer({ catalog, health: new Health(), sessions: new Sessions(), config, authorize: key => !!keys.verify(key), log });
   setInterval(() => { void catalog.refresh(); }, config.refreshMinutes * 60_000).unref();
   server.listen(port, host, () => {
     const base = `http://${host.includes(':') ? `[${host}]` : host}:${port}`;
-    console.log(`\nfree-router listening on ${base}
-  OpenAI clients:    base URL ${base}/v1, model free-router/auto
+    console.log(`\nonerouter listening on ${base}
+  OpenAI clients:    base URL ${base}/v1, model onerouter/auto
   Anthropic clients: ANTHROPIC_BASE_URL=${base}  ANTHROPIC_AUTH_TOKEN=<your fr_ key>`);
   });
 }
@@ -94,7 +94,7 @@ function key(args: string[]) {
     console.log(`Key ${record.id} (${record.name}), shown only once:\n\n  ${key}\n`);
   } else if (command === 'list') {
     const records = store.list();
-    if (!records.length) console.log('No keys. Create one with: free-router key create');
+    if (!records.length) console.log('No keys. Create one with: onerouter key create');
     for (const r of records) console.log(`${r.id}  ${r.prefix}…  ${r.name.padEnd(20)} ${r.createdAt.slice(0, 10)}`);
   } else if (command === 'revoke' && value) {
     const removed = store.revoke(value);

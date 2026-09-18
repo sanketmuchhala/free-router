@@ -25,7 +25,7 @@ export interface RouterConfig {
   host: string;
   port: number;
   providers: ProviderConfig[];
-  /** Model names the router does not know (such as "claude-sonnet-4") are routed like free-router/auto. */
+  /** Model names the router does not know (such as "claude-sonnet-4") are routed like onerouter/auto. */
   routeUnknownModels: boolean;
   /** Models tried per request before giving up. */
   maxAttempts: number;

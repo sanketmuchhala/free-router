@@ -1,4 +1,4 @@
-import { LABEL, redact } from './providers.js';
+import { LABEL, redact } from '../providers/index.js';
 import type { Failure, FailureCategory, Provider } from './types.js';
 
 /** A request to one model failed. `failure` is safe to show: keys are removed and text is capped. */

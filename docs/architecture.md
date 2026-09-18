@@ -2,7 +2,7 @@
 
 [Back to the README](../README.md)
 
-free-router is one Node.js process with no runtime dependencies. A request flows through five modules:
+onerouter is one Node.js process with no runtime dependencies. A request flows through five modules:
 
 ```mermaid
 flowchart LR
@@ -19,7 +19,7 @@ flowchart LR
 | File | Does |
 | --- | --- |
 | `src/cli.ts` | `serve`, `models`, `key`, `init` |
-| `src/config.ts` | Reads `~/.free-router/config.json` or environment variables; `env:NAME` keys |
+| `src/config.ts` | Reads `~/.onerouter/config.json` or environment variables; `env:NAME` keys |
 | `src/providers.ts` | Provider kinds, their OpenAI-compatible URLs, auth headers, address rules |
 | `src/catalog.ts` | Lists each provider's models and keeps only free ones (`isFree`); refreshed on a timer; a failing provider keeps its last list |
 | `src/rank.ts` | What a request needs (`profileTask`), scoring (`rank`), health and cooldowns (`Health`), sticky conversations (`Sessions`) |
@@ -42,8 +42,8 @@ Non-streaming requests fall back on any failure, since nothing is sent until the
 | Free models | `Catalog`, memory | Refreshed every `refreshMinutes` |
 | Health, cooldowns | `Health`, memory, keyed by a hash of provider, address, and key, plus model | Process |
 | Conversation to model | `Sessions`, memory, at most 2,000, one hour each | Process |
-| Router keys | `~/.free-router/keys.json`, hashes | Until revoked |
+| Router keys | `~/.onerouter/keys.json`, hashes | Until revoked |
 
 ## Origin
 
-The ranking, health, fallback rules, and free-price checks are ported from the Free Router in [Nerdplexity](https://github.com/sanketmuchhala/Nerdplexity) (`backend/src/runtime/router.ts`), which documents the scoring in detail (`backend/docs/free-router.md`). What is new here: serving OpenAI and Anthropic clients directly, tool calls passed through from the client, sticky conversations, per-model output caps, and router keys.
+The ranking, health, fallback rules, and free-price checks are ported from the One Router in [One Router](https://github.com/sanketmuchhala/One Router) (`backend/src/runtime/router.ts`), which documents the scoring in detail (`backend/docs/onerouter.md`). What is new here: serving OpenAI and Anthropic clients directly, tool calls passed through from the client, sticky conversations, per-model output caps, and router keys.

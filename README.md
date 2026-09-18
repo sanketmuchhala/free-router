@@ -1,16 +1,16 @@
-# free-router
+# onerouter
 
 One endpoint for every free AI model you have. Point any OpenAI or Anthropic client at it (a coding agent, Claude Code, a script) and each request goes to the best free model that can take it. When a model is rate limited or down, the router tries the next one, before your client sees anything.
 
 ```text
-your agent ──▶ free-router ──▶ OpenRouter (:free models) ─┐
+your agent ──▶ onerouter ──▶ OpenRouter (:free models) ─┐
   (OpenAI or        │       ──▶ Groq, Cerebras, Gemini,    ├─ best free model first,
    Anthropic API)   │           Mistral, SambaNova, HF     │  the next one if it fails
                     │       ──▶ Ollama, LM Studio (local) ─┘
                     └─ one key (fr_…); your provider keys never leave the router
 ```
 
-Status: early (0.1). It works end to end with the OpenAI and Anthropic SDKs and with Claude Code (tested), but it is new. It grew out of the Free Router in [Nerdplexity](https://github.com/sanketmuchhala/Nerdplexity).
+Status: early (0.1). It works end to end with the OpenAI and Anthropic SDKs and with Claude Code (tested), but it is new. It grew out of the One Router in [One Router](https://github.com/sanketmuchhala/One Router).
 
 ## Contents
 
@@ -30,20 +30,20 @@ Status: early (0.1). It works end to end with the OpenAI and Anthropic SDKs and 
 
 Free AI models are spread over many providers, each with small limits: OpenRouter's free models allow 20 requests a minute and 50 a day (1,000 a day once you have bought $10 of credits), Groq and Cerebras have per-minute and per-day caps, and so on. A coding agent sends dozens of requests per task and stops at the first rate limit.
 
-free-router puts them behind one address and one key. It knows which of your models are free, ranks them for each request, keeps a conversation on the same model while it works, and moves on when one runs out.
+onerouter puts them behind one address and one key. It knows which of your models are free, ranks them for each request, keeps a conversation on the same model while it works, and moves on when one runs out.
 
 ## Quick start
 
 Requires Node.js 20 or newer.
 
 ```bash
-git clone https://github.com/sanketmuchhala/free-router.git
-cd free-router
+git clone https://github.com/sanketmuchhala/onerouter.git
+cd onerouter
 pnpm install && pnpm build        # or: npm install && npm run build
-npm link                          # optional: puts `free-router` on your PATH
+npm link                          # optional: puts `onerouter` on your PATH
 
 export OPENROUTER_API_KEY=sk-or-...   # a free OpenRouter key is enough to start
-free-router serve
+onerouter serve
 ```
 
 On first start it creates your router key and prints it once:
@@ -58,13 +58,13 @@ Providers from environment variables: openrouter, ollama, lmstudio
   ollama       unavailable: Nothing is answering at http://127.0.0.1:11434/v1.
   lmstudio     unavailable: ...
 
-free-router listening on http://127.0.0.1:4141
+onerouter listening on http://127.0.0.1:4141
 ```
 
 Check what it found, best first:
 
 ```bash
-free-router models
+onerouter models
 ```
 
 ## Use it from your tools
@@ -75,10 +75,10 @@ free-router models
 export ANTHROPIC_BASE_URL=http://127.0.0.1:4141
 export ANTHROPIC_AUTH_TOKEN=fr_...          # your router key
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=100000 # free models' windows are smaller than Claude's
-claude --model free-router/auto
+claude --model onerouter/auto
 ```
 
-- Any model name the router does not know (`claude-sonnet-4-5`, `sonnet`) is routed like `free-router/auto`, so the default model works too.
+- Any model name the router does not know (`claude-sonnet-4-5`, `sonnet`) is routed like `onerouter/auto`, so the default model works too.
 - Set `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to about the smallest context you want to use (most large free models have 128k or more; 100000 leaves room). Claude Code assumes 200k for a model it does not know, and would otherwise let a conversation grow past what free models accept.
 - In your own harness: `new Anthropic({ baseURL: 'http://127.0.0.1:4141', apiKey: 'fr_...' })`. Both `x-api-key` and `Authorization: Bearer` work.
 
@@ -87,7 +87,7 @@ claude --model free-router/auto
 ```python
 from openai import OpenAI
 client = OpenAI(base_url="http://127.0.0.1:4141/v1", api_key="fr_...")
-reply = client.chat.completions.create(model="free-router/auto", messages=[{"role": "user", "content": "Hello"}])
+reply = client.chat.completions.create(model="onerouter/auto", messages=[{"role": "user", "content": "Hello"}])
 ```
 
 ```ts
@@ -95,21 +95,21 @@ import OpenAI from 'openai';
 const client = new OpenAI({ baseURL: 'http://127.0.0.1:4141/v1', apiKey: 'fr_...' });
 ```
 
-Tools that take an "OpenAI-compatible" base URL and key (Aider, Cline, Continue, Open WebUI, and others) work the same way: base URL `http://127.0.0.1:4141/v1`, key `fr_...`, model `free-router/auto`.
+Tools that take an "OpenAI-compatible" base URL and key (Aider, Cline, Continue, Open WebUI, and others) work the same way: base URL `http://127.0.0.1:4141/v1`, key `fr_...`, model `onerouter/auto`.
 
 ### curl
 
 ```bash
 curl http://127.0.0.1:4141/v1/chat/completions \
   -H "Authorization: Bearer fr_..." -H "Content-Type: application/json" \
-  -d '{"model":"free-router/auto","messages":[{"role":"user","content":"Hi"}]}' -i
+  -d '{"model":"onerouter/auto","messages":[{"role":"user","content":"Hi"}]}' -i
 ```
 
-The response headers say which model answered: `x-free-router-model: openrouter/meta-llama/llama-3.3-70b-instruct:free`, and `x-free-router-attempts: 2` when the first choice failed.
+The response headers say which model answered: `x-onerouter-model: openrouter/meta-llama/llama-3.3-70b-instruct:free`, and `x-onerouter-attempts: 2` when the first choice failed.
 
 ## Providers: what counts as free
 
-A model is used only when free-router can confirm it is free. Unknown prices are never treated as free.
+A model is used only when onerouter can confirm it is free. Unknown prices are never treated as free.
 
 | Provider | Environment variable | Free when |
 | --- | --- | --- |
@@ -130,17 +130,17 @@ Ollama (`http://127.0.0.1:11434`) and LM Studio (`http://127.0.0.1:1234`) are us
 
 | `model` in the request | What happens |
 | --- | --- |
-| `free-router/auto` (also `auto`, `free`, `free-router`) | The router ranks every free model for this request and falls back as needed |
+| `onerouter/auto` (also `auto`, `free`, `onerouter`) | The router ranks every free model for this request and falls back as needed |
 | `provider/model`, e.g. `groq/llama-3.3-70b-versatile` | Exactly that model, no fallback. It must be one of your free models (see `GET /v1/models`) |
 | A bare model ID that one provider has | That model |
-| Anything else (`claude-sonnet-4-5`, `gpt-4o`) | Routed like `free-router/auto`. Set `"routeUnknownModels": false` to get a 404 instead |
+| Anything else (`claude-sonnet-4-5`, `gpt-4o`) | Routed like `onerouter/auto`. Set `"routeUnknownModels": false` to get a 404 instead |
 
 ## What happens to a request
 
 1. **Needs.** The router reads what the request needs: images, tools, and its size (the prompt and tool definitions, at about four characters per token, plus 4,096 tokens reserved for the answer). A request with tools is treated as coding work.
 2. **Leave out.** Models that report no image or tool support, whose context is too small, or that are cooling down after a failure.
 3. **Rank.** By size read from the model name (larger first, on a log scale), fit for the task (`coder` models for code, reasoning models for math), tool support, larger context for long requests, and how the model did on recent requests on this router (success rate, speed). Models on your machine get a small penalty (usually slower); `openrouter/free` goes last.
-4. **Same model for a conversation.** Once a model has answered, later requests in the same conversation go to it first while it keeps working, so an agent does not change model every turn. A conversation is identified by the `x-free-router-session` header, Anthropic's `metadata.user_id` (Claude Code sends one per session), or the system prompt plus the first user message.
+4. **Same model for a conversation.** Once a model has answered, later requests in the same conversation go to it first while it keeps working, so an agent does not change model every turn. A conversation is identified by the `x-onerouter-session` header, Anthropic's `metadata.user_id` (Claude Code sends one per session), or the system prompt plus the first user message.
 5. **Send, and fall back before any output.** The request goes to the first model with rate-limit waits off. If it fails before sending any text, reasoning, or tool call (rate limit, error, bad key, rejected request, or silence for 2 minutes), the next model is tried, up to 4. Once a model has sent output, the answer is that model's: a partial answer is never continued by another model. A refusal is never retried elsewhere.
 6. **Cooldowns.** A rate-limited model is skipped until the provider's reset (or a minute); an account-wide limit or a bad key skips every model on that account. This is kept in memory.
 7. **Fit the provider.** Large answer requests are capped at the model's maximum output and at what fits in its context (Claude Code asks for 32,000 tokens; many free models allow 8,192). Groq gets `max_completion_tokens`; Mistral gets tool call IDs in the 9-character form it accepts.
@@ -149,7 +149,7 @@ When no model can answer, the error says how many were tried, the last failure, 
 
 ## Configuration
 
-Without a config file, providers come from environment variables (above). For more control, run `free-router init` and edit `~/.free-router/config.json`:
+Without a config file, providers come from environment variables (above). For more control, run `onerouter init` and edit `~/.onerouter/config.json`:
 
 ```json
 {
@@ -173,19 +173,19 @@ Without a config file, providers come from environment variables (above). For mo
 | `providers[].baseURL` | the provider's | Required for `ollama` and `openai-compatible`. Remote addresses must be https |
 | `providers[].billing` | `unknown` | `none` means the account cannot be charged, so all its models count as free |
 | `providers[].disabled` | `false` | Keep the entry but skip it |
-| `routeUnknownModels` | `true` | Route unknown model names like `free-router/auto` |
+| `routeUnknownModels` | `true` | Route unknown model names like `onerouter/auto` |
 | `maxAttempts` | `4` | Models tried per request |
 | `firstOutputTimeoutMs` | `120000` | Silence before a model counts as failed (streaming requests) |
 | `refreshMinutes` | `30` | How often provider catalogs are listed again |
 
-Files live in `~/.free-router` (or `FREE_ROUTER_HOME`): `config.json` and `keys.json`. Use `--config FILE` or `FREE_ROUTER_CONFIG` for another config file.
+Files live in `~/.onerouter` (or `FREE_ROUTER_HOME`): `config.json` and `keys.json`. Use `--config FILE` or `FREE_ROUTER_CONFIG` for another config file.
 
 ### Router keys
 
 ```bash
-free-router key create my-harness   # prints a new fr_ key once
-free-router key list
-free-router key revoke <id>
+onerouter key create my-harness   # prints a new fr_ key once
+onerouter key list
+onerouter key revoke <id>
 ```
 
 ## API
@@ -195,24 +195,24 @@ free-router key revoke <id>
 | `POST /v1/chat/completions` | key | OpenAI chat completions, streaming or not, with tools. Passed to the chosen model as is, apart from `model` and the fixes in step 7 |
 | `POST /v1/messages` | key | Anthropic Messages, streaming or not, with tools. Translated to and from OpenAI chat completions |
 | `POST /v1/messages/count_tokens` | key | An estimate (four characters per token) |
-| `GET /v1/models` | key | `free-router/auto` and every free model; Anthropic's list format when the request has an `anthropic-version` header |
+| `GET /v1/models` | key | `onerouter/auto` and every free model; Anthropic's list format when the request has an `anthropic-version` header |
 | `GET /health` | none | Providers, whether each was reachable, and how many free models each has |
 
 Anthropic translation, in short: `system` becomes a system message; text and images pass through; `tool_use` becomes `tool_calls`; `tool_result` becomes a `tool` message; `tool_choice` any/tool/none map to required/function/none; thinking blocks from earlier turns are dropped; Anthropic's server tools (such as web search) and PDF documents are not passed on (they cannot run on other providers). In the answer, text streams as it arrives, and tool calls are sent whole when the model finishes, because providers split tool arguments in different ways.
 
 ## Limits and caveats
 
-- **Free quotas run out.** An agent task can take dozens of requests. OpenRouter alone gives about 50 a day. Add Groq, Cerebras, Gemini, and local models to spread the load, and check `free-router models`.
+- **Free quotas run out.** An agent task can take dozens of requests. OpenRouter alone gives about 50 a day. Add Groq, Cerebras, Gemini, and local models to spread the load, and check `onerouter models`.
 - **Tool calling varies by model.** Free models follow tool schemas less reliably than frontier models. Large models with tool support are ranked first for requests with tools, but expect more retries from your agent.
 - **Privacy.** Some free models log or train on prompts, and your code goes to them. Check each provider's terms; local models keep everything on your machine.
 - **Ranking uses names, not measurements.** Model size and task fit are read from model IDs, plus the router's own record of recent successes. There is no benchmark yet.
 - **Health is in memory.** A restart forgets cooldowns and which model a conversation used.
-- **Not supported yet:** a multi-model mode (several models drafting, one checking, as in Nerdplexity's Free Agent), per-key usage limits, prompt caching, and reasoning ("thinking") output for Anthropic clients (the model's reasoning is not forwarded).
+- **Not supported yet:** a multi-model mode (several models drafting, one checking, as in One Router's One Agent), per-key usage limits, prompt caching, and reasoning ("thinking") output for Anthropic clients (the model's reasoning is not forwarded).
 
 ## Security
 
 - Listens on `127.0.0.1` only, unless you change `host`.
-- Every API route needs a router key. Keys are stored as SHA-256 hashes in `~/.free-router/keys.json` (mode 600); a key is shown once, when created.
+- Every API route needs a router key. Keys are stored as SHA-256 hashes in `~/.onerouter/keys.json` (mode 600); a key is shown once, when created.
 - Provider keys stay in the router: read from the environment or your config file, sent only to their own provider, and removed from any error text.
 - Remote providers must use https. Requests use `redirect: 'error'`, so a provider cannot redirect a request, and its key, elsewhere.
 - Prompts and answers are not logged. The log line for a request names the models tried, the status, and the time.
@@ -231,7 +231,7 @@ The tests run the real server against a fake provider whose models misbehave on 
 
 ## Acknowledgements
 
-The interactive Terminal User Interface (TUI) design and inspiration comes from [humantonylee/free-router](https://github.com/humantonylee/free-router). Although this project shares a similar name, it was built independently as an API proxy. We loved their TUI approach and adapted a similar interface for our CLI.
+The interactive Terminal User Interface (TUI) design and inspiration comes from [humantonylee/onerouter](https://github.com/humantonylee/onerouter). Although this project shares a similar name, it was built independently as an API proxy. We loved their TUI approach and adapted a similar interface for our CLI.
 
 ## License
 
