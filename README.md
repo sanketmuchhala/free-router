@@ -46,17 +46,15 @@ request/workflow
 
 ## 🚀 Getting Started
 
-### 1. Install & Link
+### 1. Install Globally
 
-Clone the repository and install it globally so you can run the `onerouter` command from anywhere:
+You can now easily install One Router via npm!
 
 ```bash
-git clone https://github.com/sanketmuchhala/one-router.git
-cd one-router
-pnpm install
-pnpm build
-npm link    # Maps the 'onerouter' command globally
+npm install -g @sanketmuchhala1/onerouter
 ```
+
+*(Alternatively, to install from source: `git clone https://github.com/sanketmuchhala/one-router.git`, `pnpm install`, `pnpm build`, and `npm link`.)*
 
 ### 2. Configure Providers
 
