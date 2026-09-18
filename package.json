@@ -27,10 +27,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "pnpm build && node dist/cli/index.js serve",
+    "dev": "pnpm build && node --env-file=.env dist/cli/index.js serve",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node dist/cli/index.js serve"
+    "start": "node --env-file=.env dist/cli/index.js serve"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
