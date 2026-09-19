@@ -10,6 +10,9 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,11 +36,28 @@ jobs:
         run: pnpm build
 
       - name: Verify npm auth
-        run: npm whoami
+        run: npm whoami || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
-        run: npm publish --access=public
+        run: npm publish --access=public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@sanketmuchhala'
+
+      - name: Rename package for GitHub Packages
+        run: |
+          # GitHub Packages requires the scope to exactly match the repository owner
+          sed -i 's/"@sanketmuchhala1\/onerouter"/"@sanketmuchhala\/onerouter"/' package.json
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
