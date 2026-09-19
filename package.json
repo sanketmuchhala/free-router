@@ -1,6 +1,6 @@
 {
   "name": "@sanketmuchhala1/onerouter",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "One OpenAI- and Anthropic-compatible endpoint for every free AI model you have. Picks the best free model for each request and falls back when one is rate limited.",
   "type": "module",
   "license": "MIT",
